@@ -31,7 +31,7 @@ export default class App extends React.Component {
     this.getLocationAsync();
   }
 
-  onRegionChange = (region) => {
+  onRegionChangeComplete = (region) => {
     this.setState({ region });
   }
 
@@ -79,7 +79,7 @@ export default class App extends React.Component {
           <MapView
             style={{ flex: 1 }}
             region={region}
-            onRegionChange={this.onRegionChange}
+            onRegionChangeComplete={this.onRegionChangeComplete}
             showsUserLocation={showsUserLocation}
           />
           {
