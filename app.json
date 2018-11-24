@@ -21,7 +21,11 @@
       "**/*"
     ],
     "ios": {
+      "bundleIdentifier": "org.streetr",
       "supportsTablet": true
+    },
+    "android": {
+      "package": "org.streetr"
     }
   }
 }
