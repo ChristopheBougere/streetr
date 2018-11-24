@@ -1,6 +1,10 @@
 import React from 'react';
-import { Platform, Image, StyleSheet, Text, View } from 'react-native';
-import { Constants, Location, Permissions, MapView, ImagePicker } from 'expo';
+import {
+  Platform, Image, StyleSheet, View,
+} from 'react-native';
+import {
+  Constants, Location, Permissions, MapView, ImagePicker,
+} from 'expo';
 import { Button, ThemeProvider } from 'react-native-elements';
 
 const initialRegion = {
@@ -10,6 +14,12 @@ const initialRegion = {
   longitudeDelta: 0.0421,
 };
 
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+});
+
 export default class App extends React.Component {
   state = {
     region: initialRegion,
@@ -18,14 +28,18 @@ export default class App extends React.Component {
   };
 
   componentWillMount() {
-    this._getLocationAsync();
+    this.getLocationAsync();
   }
 
-  _getLocationAsync = async () => {
+  onRegionChange = (region) => {
+    this.setState({ region });
+  }
+
+  getLocationAsync = async () => {
     if (Platform.OS === 'android' && !Constants.isDevice) {
       console.log('Oops, this will not work on Sketch in an Android emulator. Try it on your device!');
     } else {
-      let { status } = await Permissions.askAsync(Permissions.LOCATION);
+      const { status } = await Permissions.askAsync(Permissions.LOCATION);
       if (status !== 'granted') {
         console.log('Permission to access location was denied');
       }
@@ -43,10 +57,10 @@ export default class App extends React.Component {
     }
   };
 
-  async _pickImage () {
-    let result = await ImagePicker.launchImageLibraryAsync({
+  async pickImage() {
+    const result = await ImagePicker.launchImageLibraryAsync({
       allowsEditing: true,
-      aspect: [4, 3],
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
     });
 
     console.log(result);
@@ -56,38 +70,30 @@ export default class App extends React.Component {
     }
   }
 
-  onRegionChange(region) {
-    this.setState({ region });
-  }
-
   render() {
-    const { userLocation, image } = this.state;
+    const { region, userLocation, image } = this.state;
     const showsUserLocation = typeof userLocation === 'object';
     return (
       <ThemeProvider>
         <View style={styles.container}>
           <MapView
             style={{ flex: 1 }}
-            region={this.state.region}
-            onRegionChange={region => this.onRegionChange}
-            showsUserLocation={true}
+            region={region}
+            onRegionChange={this.onRegionChange}
+            showsUserLocation={showsUserLocation}
           />
-          {image &&
-          <Image source={{ uri: image }} style={{ width: 200, height: 200 }} />}      
+          {
+            image
+            && <Image source={{ uri: image }} style={{ width: 200, height: 200 }} />
+          }
           <Button
             raised
-            icon={{name: 'add-a-photo'}}
-            title='Upload'
-            onPress={() => this._pickImage()}
+            icon={{ name: 'add-a-photo' }}
+            title="Upload"
+            onPress={() => this.pickImage()}
           />
         </View>
       </ThemeProvider>
     );
   }
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-});

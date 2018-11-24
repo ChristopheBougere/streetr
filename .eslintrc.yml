@@ -1,0 +1,5 @@
+extends: airbnb
+parser: babel-eslint
+rules:
+  react/jsx-filename-extension: 0 # Not recommended: https://github.com/facebook/create-react-app/issues/87
+  no-console: 0
