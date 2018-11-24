@@ -24,7 +24,7 @@ export default class App extends React.Component {
   state = {
     region: initialRegion,
     userLocation: null,
-    image: null,
+    images: [],
   };
 
   componentWillMount() {
@@ -58,20 +58,31 @@ export default class App extends React.Component {
   };
 
   async pickImage() {
+    const { images } = this.state;
     const result = await ImagePicker.launchImageLibraryAsync({
       allowsEditing: true,
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      exif: true,
     });
 
     console.log(result);
 
     if (!result.cancelled) {
-      this.setState({ image: result.uri });
+      this.setState({
+        images: [
+          ...images,
+          {
+            uri: result.uri,
+            latitude: result.exif && result.exif.GPSLatitude || null,
+            longitude: result.exif && result.exif.GPSLongitude || null,
+          },
+        ],
+      });
     }
   }
 
   render() {
-    const { region, userLocation, image } = this.state;
+    const { region, userLocation, images } = this.state;
     const showsUserLocation = typeof userLocation === 'object';
     return (
       <ThemeProvider>
@@ -81,11 +92,22 @@ export default class App extends React.Component {
             region={region}
             onRegionChangeComplete={this.onRegionChangeComplete}
             showsUserLocation={showsUserLocation}
-          />
-          {
-            image
-            && <Image source={{ uri: image }} style={{ width: 200, height: 200 }} />
-          }
+          >
+            {images.filter(image => typeof image.latitude === 'number' && typeof image.longitude === 'number')
+              .map((image, i) => (
+              <MapView.Marker
+                key={`marker-${i}`}
+                coordinate={{
+                  latitude: image.latitude,
+                  longitude: image.longitude,
+                }}
+                title={image.uri}
+                description={image.uri}
+              >
+                <Image source={{ uri: image.uri }} style={{ width: 30, height: 30 }} />
+              </MapView.Marker>
+            ))}
+          </MapView>
           <Button
             raised
             icon={{ name: 'add-a-photo' }}
