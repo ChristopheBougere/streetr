@@ -1,11 +1,12 @@
 import React from 'react';
 import {
-  Platform, Image, StyleSheet, View,
+  Platform, Image, StyleSheet, Text,
 } from 'react-native';
 import {
   Constants, Location, Permissions, MapView, ImagePicker,
 } from 'expo';
 import { Button, ThemeProvider } from 'react-native-elements';
+import uuidV4 from 'uuid/v4';
 
 const initialRegion = {
   latitude: 48.8534,
@@ -15,8 +16,23 @@ const initialRegion = {
 };
 
 const styles = StyleSheet.create({
-  container: {
+  mapContainer: {
     flex: 1,
+  },
+  markerThumbnail: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    borderWidth: 1,
+    borderColor: '#000', // TODO find better color, or add shadow
+  },
+  markerPopupImage: {
+    width: 100,
+    height: 100,
+  },
+  uploadButton: {
+    position: 'absolute',
+    bottom: 100,
   },
 });
 
@@ -38,47 +54,53 @@ export default class App extends React.Component {
   getLocationAsync = async () => {
     if (Platform.OS === 'android' && !Constants.isDevice) {
       console.log('Oops, this will not work on Sketch in an Android emulator. Try it on your device!');
-    } else {
-      const { status } = await Permissions.askAsync(Permissions.LOCATION);
-      if (status !== 'granted') {
-        console.log('Permission to access location was denied');
-      }
-
-      const location = await Location.getCurrentPositionAsync({});
-      this.setState({
-        userLocation: location,
-        region: {
-          latitude: location.coords.latitude,
-          longitude: location.coords.longitude,
-          latitudeDelta: initialRegion.latitudeDelta,
-          longitudeDelta: initialRegion.longitudeDelta,
-        },
-      });
+      return;
     }
+    const { status } = await Permissions.askAsync(Permissions.LOCATION);
+    if (status !== 'granted') {
+      console.log('Permission to access location was denied');
+    }
+
+    const location = await Location.getCurrentPositionAsync({});
+    this.setState({
+      userLocation: location,
+      region: {
+        latitude: location.coords.latitude,
+        longitude: location.coords.longitude,
+        latitudeDelta: initialRegion.latitudeDelta,
+        longitudeDelta: initialRegion.longitudeDelta,
+      },
+    });
   };
 
   async pickImage() {
-    const { images } = this.state;
     const result = await ImagePicker.launchImageLibraryAsync({
-      allowsEditing: true,
+      // allowsEditing: true,
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       exif: true,
     });
 
     console.log(result);
 
-    if (!result.cancelled) {
-      this.setState({
-        images: [
-          ...images,
-          {
-            uri: result.uri,
-            latitude: result.exif && result.exif.GPSLatitude || null,
-            longitude: result.exif && result.exif.GPSLongitude || null,
-          },
-        ],
-      });
+    if (result.cancelled) {
+      return;
     }
+    if (!result.exif || typeof result.exif.GPSLatitude !== 'number' || typeof result.exif.GPSLongitude !== 'number') {
+      // TODO we should let the user pin a point
+      return;
+    }
+    const { images } = this.state;
+    this.setState({
+      images: [
+        ...images,
+        {
+          uuid: uuidV4(),
+          uri: result.uri,
+          latitude: result.exif.GPSLatitude,
+          longitude: result.exif.GPSLongitude,
+        },
+      ],
+    });
   }
 
   render() {
@@ -86,17 +108,16 @@ export default class App extends React.Component {
     const showsUserLocation = typeof userLocation === 'object';
     return (
       <ThemeProvider>
-        <View style={styles.container}>
-          <MapView
-            style={{ flex: 1 }}
-            region={region}
-            onRegionChangeComplete={this.onRegionChangeComplete}
-            showsUserLocation={showsUserLocation}
-          >
-            {images.filter(image => typeof image.latitude === 'number' && typeof image.longitude === 'number')
-              .map((image, i) => (
+        <MapView
+          style={styles.mapContainer}
+          region={region}
+          onRegionChangeComplete={this.onRegionChangeComplete}
+          showsUserLocation={showsUserLocation}
+        >
+          {images.filter(image => typeof image.latitude === 'number' && typeof image.longitude === 'number')
+            .map(image => (
               <MapView.Marker
-                key={`marker-${i}`}
+                key={`marker-${image.uuid}`}
                 coordinate={{
                   latitude: image.latitude,
                   longitude: image.longitude,
@@ -104,17 +125,21 @@ export default class App extends React.Component {
                 title={image.uri}
                 description={image.uri}
               >
-                <Image source={{ uri: image.uri }} style={{ width: 30, height: 30 }} />
+                <Image source={{ uri: image.uri }} style={styles.markerThumbnail} />
+                <MapView.Callout>
+                  {/* <Text>Hello</Text> */}
+                  <Image source={{ uri: image.uri }} style={styles.markerPopupImage} />
+                </MapView.Callout>
               </MapView.Marker>
             ))}
-          </MapView>
-          <Button
-            raised
-            icon={{ name: 'add-a-photo' }}
-            title="Upload"
-            onPress={() => this.pickImage()}
-          />
-        </View>
+        </MapView>
+        <Button
+          raised
+          icon={{ name: 'add-a-photo' }}
+          title="Upload"
+          onPress={() => this.pickImage()}
+          style={styles.uploadButton}
+        />
       </ThemeProvider>
     );
   }
