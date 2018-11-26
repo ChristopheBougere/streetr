@@ -11,6 +11,7 @@
     "lint:fix": "npx eslint --fix ."
   },
   "dependencies": {
+    "@textile/go-mobile": "^1.0.0-rc1",
     "expo": "^31.0.2",
     "expokit": "^31.0.2",
     "react": "16.5.0",
